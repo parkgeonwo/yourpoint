@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "upstash-context-7-mcp": {
+      "type": "http",
+      "url": "https://server.smithery.ai/@upstash/context7-mcp/mcp"
+    },
+    "supabase-community-supabase-mcp": {
+      "type": "http",
+      "url": "https://server.smithery.ai/@supabase-community/supabase-mcp/mcp"
+    },
+    "smithery-ai-server-sequential-thinking": {
+      "type": "http",
+      "url": "https://server.smithery.ai/@smithery-ai/server-sequential-thinking/mcp"
+    }
+  }
+}
