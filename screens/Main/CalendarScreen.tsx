@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: lightTheme.typography.fontSize.lg,
     fontWeight: '600',
-    color: lightTheme.colors.text,
+    color: lightTheme.colors.text, 
   },
   dayContainer: {
     width: 50.5,
