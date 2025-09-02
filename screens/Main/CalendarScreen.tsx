@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 20,
     justifyContent: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'flex-start',  
     paddingLeft: 1,
   },
   dayText: {
