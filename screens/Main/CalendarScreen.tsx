@@ -37,7 +37,15 @@ export default function CalendarScreen() {
     setSelectedDate('');
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  // 한국 시간(KST) 기준으로 오늘 날짜 가져오기
+  const kstDate = new Date().toLocaleDateString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).replace(/\./g, '').replace(/\s/g, '').replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+  
+  const today = kstDate;
   const markedDates = getMarkedDates();
 
   const handleDatePress = (dateString: string) => {

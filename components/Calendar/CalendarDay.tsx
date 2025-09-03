@@ -42,12 +42,6 @@ export default function CalendarDay({
   const isOtherMonth = () => {
     if (!date?.dateString) return false;
     const dateMonth = new Date(date.dateString).getMonth() + 1;
-    console.log('Debug:', {
-      dateString: date?.dateString,
-      dateMonth,
-      currentCalendarMonth,
-      isOther: dateMonth !== currentCalendarMonth
-    });
     return dateMonth !== currentCalendarMonth;
   };
 
@@ -122,16 +116,16 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   todayDay: {
-    backgroundColor: '#e5e7eb',
-    borderRadius: 4,
-    width: 46,
-    height: 20,
+    backgroundColor: '#3b82f6',
+    borderRadius: 20,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingLeft: 2,
+    alignItems: 'center',
+    paddingLeft: 0,
   },
   todayDayText: {
-    color: lightTheme.colors.text,
+    color: 'white',
     fontWeight: '600',
   },
   disabledDayText: {
