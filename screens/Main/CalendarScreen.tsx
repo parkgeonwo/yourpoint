@@ -30,8 +30,13 @@ export default function CalendarScreen() {
       id: '1',
       title: '웨비나',
       description: '프로젝트 진행 상황 논의',
-      time: '오후 2:00',
+      startDate: '2025-09-02',
+      startTime: '14:00',
+      endDate: '2025-09-02',
+      endTime: '15:00',
+      eventType: '나',
       date: '2025-09-02',
+      time: '14:00',
       userId: 'user1',
       userName: '내가',
     },
@@ -39,8 +44,13 @@ export default function CalendarScreen() {
       id: '2',
       title: '텍스토어 업무',
       description: '친구들과 만남',
-      time: '오후 6:00',
+      startDate: '2025-09-02',
+      startTime: '18:00',
+      endDate: '2025-09-02',
+      endTime: '20:00',
+      eventType: '나',
       date: '2025-09-02',
+      time: '18:00',
       userId: 'user1',
       userName: '내가',
     },
@@ -48,8 +58,13 @@ export default function CalendarScreen() {
       id: '3',
       title: '새일즈',
       description: '영업팀 회의',
-      time: '오전 10:00',
+      startDate: '2025-09-03',
+      startTime: '10:00',
+      endDate: '2025-09-03',
+      endTime: '11:30',
+      eventType: '상대',
       date: '2025-09-03',
+      time: '10:00',
       userId: 'user2',
       userName: '김철수',
     },
@@ -57,8 +72,13 @@ export default function CalendarScreen() {
       id: '4',
       title: '저과',
       description: '저녁 식사',
-      time: '오후 7:00',
+      startDate: '2025-09-03',
+      startTime: '19:00',
+      endDate: '2025-09-03',
+      endTime: '21:00',
+      eventType: '우리',
       date: '2025-09-03',
+      time: '19:00',
       userId: 'user1',
       userName: '내가',
     },
@@ -66,10 +86,29 @@ export default function CalendarScreen() {
       id: '5',
       title: '두더지',
       description: '게임',
-      time: '오후 8:00',
+      startDate: '2025-09-05',
+      startTime: '20:00',
+      endDate: '2025-09-05',
+      endTime: '22:00',
+      eventType: '나',
       date: '2025-09-05',
+      time: '20:00',
       userId: 'user3',
       userName: '이영희',
+    },
+    {
+      id: '6',
+      title: '휴가',
+      description: '여행',
+      startDate: '2025-09-12',
+      startTime: '09:00',
+      endDate: '2025-09-15',
+      endTime: '18:00',
+      eventType: '우리',
+      date: '2025-09-12',
+      time: '09:00',
+      userId: 'user1',
+      userName: '내가',
     },
   ]);
 
@@ -78,7 +117,16 @@ export default function CalendarScreen() {
       id: Date.now().toString(),
       userId: user?.id || 'user1',
       userName: user?.user_metadata?.name || '내가',
-      ...eventData,
+      title: eventData.title,
+      description: eventData.description,
+      startDate: eventData.startDate,
+      startTime: eventData.startTime,
+      endDate: eventData.endDate,
+      endTime: eventData.endTime,
+      eventType: eventData.selectedType || '나',
+      // 기존 호환성을 위해 유지
+      date: eventData.startDate,
+      time: eventData.startTime,
     };
     setEvents([...events, newEvent]);
     console.log('Event saved:', newEvent);
@@ -101,37 +149,61 @@ export default function CalendarScreen() {
 
   // 각 날짜별 일정들을 그룹화
   const getEventsForDate = (date: string) => {
-    return events.filter(event => event.date === date);
+    return events.filter(event => {
+      // 시작날짜와 종료날짜 사이에 있는 모든 날짜의 이벤트 포함
+      if (event.startDate && event.endDate) {
+        return date >= event.startDate && date <= event.endDate;
+      }
+      // 기존 호환성
+      return event.date === date;
+    });
   };
 
-
-  // 마크된 날짜 생성 (이벤트가 있는 날짜 표시)
-  const markedDates = events.reduce((marked: any, event) => {
-    const dateEvents = getEventsForDate(event.date);
-    if (!marked[event.date]) {
-      marked[event.date] = {
-        marked: true,
-        dots: [],
-      };
+  // 날짜 범위 생성 함수
+  const getDateRange = (startDate: string, endDate: string) => {
+    const dates = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      dates.push(d.toISOString().split('T')[0]);
     }
-    
-    // 각 사용자별로 하나의 점만 표시
-    const userIds = [...new Set(dateEvents.map(e => e.userId))];
-    marked[event.date].dots = userIds.map(userId => ({
-      color: getUserColor(userId),
-    }));
-    
-    return marked;
-  }, {});
+    return dates;
+  };
 
-  // 선택된 날짜 추가
-  if (selectedDate) {
-    markedDates[selectedDate] = {
-      ...markedDates[selectedDate],
-      selected: true,
-      selectedColor: lightTheme.colors.primary,
-    };
-  }
+  // 마크된 날짜 생성 (period marking 사용)
+  const markedDates = {};
+  
+  events.forEach((event) => {
+    if (event.startDate && event.endDate) {
+      const dateRange = getDateRange(event.startDate, event.endDate);
+      const isMultiDay = event.startDate !== event.endDate;
+      const color = getUserColor(event.userId);
+      
+      if (isMultiDay) {
+        // 멀티데이 이벤트는 period로 표시
+        dateRange.forEach((date, index) => {
+          const isStarting = index === 0;
+          const isEnding = index === dateRange.length - 1;
+          
+          markedDates[date] = {
+            startingDay: isStarting,
+            endingDay: isEnding,
+            color: color,
+            textColor: 'white',
+          };
+        });
+      } else {
+        // 단일 날짜 이벤트는 marked로 표시
+        const date = event.startDate;
+        markedDates[date] = {
+          marked: true,
+          dotColor: color,
+        };
+      }
+    }
+  });
+
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -140,10 +212,11 @@ export default function CalendarScreen() {
           key={currentMonth}
           current={currentMonth}
           markedDates={markedDates}
-          markingType="multi-dot"
+          markingType="period"
           onDayPress={(day) => {
             console.log('Selected date:', day.dateString);
             setSelectedDate(day.dateString);
+            setShowEventDetail(true);
           }}
           monthFormat={'yyyy년 M월'}
           onPressArrowLeft={(subtractMonth) => {
@@ -197,7 +270,6 @@ export default function CalendarScreen() {
           dayComponent={({date, state}) => {
             const dateString = date?.dateString || '';
             const dayEvents = getEventsForDate(dateString);
-            const isSelected = selectedDate === dateString;
             const isToday = dateString === today;
             
             return (
@@ -206,19 +278,15 @@ export default function CalendarScreen() {
                 onPress={() => {
                   console.log('Selected date:', dateString);
                   setSelectedDate(dateString);
-                  if (dayEvents.length > 0) {
-                    setShowEventDetail(true);
-                  }
+                  setShowEventDetail(true);
                 }}
               >
                 <View style={[
                   styles.dayNumberContainer,
-                  isSelected && styles.selectedDay,
                   isToday && styles.todayDay,
                 ]}>
                   <Text style={[
                     styles.dayText,
-                    isSelected && styles.selectedDayText,
                     isToday && styles.todayDayText,
                     state === 'disabled' && styles.disabledDayText,
                   ]}>
@@ -251,7 +319,10 @@ export default function CalendarScreen() {
 
       <TouchableOpacity 
         style={styles.fab}
-        onPress={() => setShowEventModal(true)}
+        onPress={() => {
+          setSelectedDate(today);
+          setShowEventModal(true);
+        }}
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
@@ -269,6 +340,7 @@ export default function CalendarScreen() {
         selectedDate={selectedDate}
         events={getEventsForDate(selectedDate)}
         getUserColor={getUserColor}
+        onAddEvent={() => setShowEventModal(true)}
       />
 
       <MonthYearPicker
@@ -329,18 +401,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: lightTheme.colors.text,
     fontWeight: '400',
-  },
-  selectedDay: {
-    backgroundColor: lightTheme.colors.primary,
-    borderRadius: 4,
-    width: 42,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedDayText: {
-    color: 'white',
-    fontWeight: '600',
   },
   todayDay: {
     backgroundColor: '#e5e7eb',

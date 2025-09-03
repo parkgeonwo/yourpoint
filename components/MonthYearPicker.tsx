@@ -93,8 +93,6 @@ export default function MonthYearPicker({
     <Modal
       isVisible={visible}
       onBackdropPress={onClose}
-      onSwipeComplete={onClose}
-      swipeDirection="down"
       style={styles.modal}
     >
       <View style={styles.container}>
@@ -192,8 +190,6 @@ export default function MonthYearPicker({
               </ScrollView>
             </View>
           </View>
-          
-          <View style={styles.selectionIndicator} />
         </View>
       </View>
     </Modal>
@@ -202,14 +198,15 @@ export default function MonthYearPicker({
 
 const styles = StyleSheet.create({
   modal: {
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
     margin: 0,
   },
   container: {
     backgroundColor: lightTheme.colors.surface,
-    borderTopLeftRadius: lightTheme.borderRadius.xl,
-    borderTopRightRadius: lightTheme.borderRadius.xl,
-    height: 400,
+    borderRadius: lightTheme.borderRadius.xl,
+    width: width - 40,
+    height: 380,
   },
   handle: {
     width: 40,
@@ -283,17 +280,5 @@ const styles = StyleSheet.create({
     color: lightTheme.colors.text,
     fontWeight: '700',
     fontSize: lightTheme.typography.fontSize['2xl'],
-  },
-  selectionIndicator: {
-    position: 'absolute',
-    top: '50%',
-    left: lightTheme.spacing.lg,
-    right: lightTheme.spacing.lg,
-    height: ITEM_HEIGHT,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: lightTheme.colors.border + '60',
-    marginTop: -ITEM_HEIGHT / 2 + lightTheme.spacing.lg,
-    pointerEvents: 'none',
   },
 });

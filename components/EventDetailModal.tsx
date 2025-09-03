@@ -22,6 +22,7 @@ interface EventDetailModalProps {
     userName: string;
   }>;
   getUserColor: (userId: string) => string;
+  onAddEvent: () => void;
 }
 
 export default function EventDetailModal({
@@ -30,6 +31,7 @@ export default function EventDetailModal({
   selectedDate,
   events,
   getUserColor,
+  onAddEvent,
 }: EventDetailModalProps) {
   return (
     <Modal
@@ -65,7 +67,18 @@ export default function EventDetailModal({
             </View>
           ))}
           {events.length === 0 && (
-            <Text style={styles.noEventsText}>이 날에는 일정이 없습니다</Text>
+            <View style={styles.emptyState}>
+              <Text style={styles.noEventsText}>이 날에는 일정이 없습니다</Text>
+              <TouchableOpacity 
+                style={styles.addEventButton}
+                onPress={() => {
+                  onClose();
+                  onAddEvent();
+                }}
+              >
+                <Text style={styles.addEventButtonText}>일정 추가하기</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </ScrollView>
       </View>
@@ -139,11 +152,25 @@ const styles = StyleSheet.create({
     fontSize: lightTheme.typography.fontSize.sm,
     color: lightTheme.colors.textSecondary,
   },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: lightTheme.spacing.xl,
+  },
   noEventsText: {
-    fontSize: lightTheme.typography.fontSize.sm,
+    fontSize: lightTheme.typography.fontSize.base,
     color: lightTheme.colors.textSecondary,
     textAlign: 'center',
-    fontStyle: 'italic',
-    paddingVertical: lightTheme.spacing.lg,
+    marginBottom: lightTheme.spacing.lg,
+  },
+  addEventButton: {
+    backgroundColor: lightTheme.colors.primary,
+    paddingHorizontal: lightTheme.spacing.lg,
+    paddingVertical: lightTheme.spacing.md,
+    borderRadius: lightTheme.borderRadius.lg,
+  },
+  addEventButtonText: {
+    color: 'white',
+    fontSize: lightTheme.typography.fontSize.base,
+    fontWeight: '600',
   },
 });
