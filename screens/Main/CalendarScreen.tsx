@@ -169,6 +169,7 @@ export default function CalendarScreen() {
                 isToday={(date?.dateString || '') === today}
                 getUserColor={getUserColor}
                 onPress={handleDatePress}
+                currentCalendarMonth={new Date(currentMonth).getMonth() + 1}
               />
             )}
           />

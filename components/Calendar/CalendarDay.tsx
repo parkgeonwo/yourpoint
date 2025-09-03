@@ -15,6 +15,7 @@ interface CalendarDayProps {
   isToday: boolean;
   getUserColor: (userId: string) => string;
   onPress: (dateString: string) => void;
+  currentCalendarMonth: number;
 }
 
 export default function CalendarDay({
@@ -24,12 +25,40 @@ export default function CalendarDay({
   isToday,
   getUserColor,
   onPress,
+  currentCalendarMonth,
 }: CalendarDayProps) {
   const dateString = date?.dateString || '';
+  
+  // 각 월의 1일은 월.일 형식으로 표시
+  const getDisplayText = () => {
+    if (date?.day === 1) {
+      const month = date?.month;
+      return `${month}.1`;
+    }
+    return date?.day?.toString() || '';
+  };
+
+  // 다른 달의 날짜인지 확인 (현재 달력과 날짜의 월이 다른 경우)
+  const isOtherMonth = () => {
+    if (!date?.dateString) return false;
+    const dateMonth = new Date(date.dateString).getMonth() + 1;
+    console.log('Debug:', {
+      dateString: date?.dateString,
+      dateMonth,
+      currentCalendarMonth,
+      isOther: dateMonth !== currentCalendarMonth
+    });
+    return dateMonth !== currentCalendarMonth;
+  };
+
+  const shouldShowDisabled = isOtherMonth();
 
   return (
     <TouchableOpacity
-      style={styles.dayContainer}
+      style={[
+        styles.dayContainer,
+        shouldShowDisabled && styles.disabledDayContainer,
+      ]}
       onPress={() => onPress(dateString)}
     >
       <View style={[
@@ -39,9 +68,9 @@ export default function CalendarDay({
         <Text style={[
           styles.dayText,
           isToday && styles.todayDayText,
-          state === 'disabled' && styles.disabledDayText,
+          shouldShowDisabled && styles.disabledDayText,
         ]}>
-          {date?.day}
+          {getDisplayText()}
         </Text>
       </View>
       {events.slice(0, 3).map((event, index) => (
@@ -107,6 +136,9 @@ const styles = StyleSheet.create({
   },
   disabledDayText: {
     color: lightTheme.colors.textSecondary,
+  },
+  disabledDayContainer: {
+    backgroundColor: '#F2F2F2',
   },
   eventIndicator: {
     position: 'absolute',
