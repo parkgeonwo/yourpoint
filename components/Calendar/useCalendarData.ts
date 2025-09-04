@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { EventService, CreateEventData } from '../../services/eventService';
+import type { Event } from '../../lib/supabase';
 
 export interface CalendarEvent {
   id: string;
@@ -111,29 +113,111 @@ const mockEvents: CalendarEvent[] = [
   },
 ];
 
-export function useCalendarData() {
-  const [events, setEvents] = useState<CalendarEvent[]>(mockEvents);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+// 서버의 Event를 클라이언트 CalendarEvent로 변환
+const transformServerEvent = (serverEvent: Event, userName?: string): CalendarEvent => ({
+  id: serverEvent.id,
+  userId: serverEvent.user_id,
+  userName: userName || '알 수 없음',
+  title: serverEvent.title,
+  description: serverEvent.description || '',
+  startDate: serverEvent.start_date,
+  startTime: serverEvent.start_time || '',
+  endDate: serverEvent.end_date,
+  endTime: serverEvent.end_time || '',
+  eventType: serverEvent.event_type,
+  // 기존 호환성을 위해 유지
+  date: serverEvent.start_date,
+  time: serverEvent.start_time || '',
+});
 
-  const addEvent = (eventData: any, userId: string, userName: string) => {
-    const newEvent: CalendarEvent = {
-      id: Date.now().toString(),
-      userId: userId || 'user1',
-      userName: userName || '내가',
-      title: eventData.title,
-      description: eventData.description,
-      startDate: eventData.startDate,
-      startTime: eventData.startTime,
-      endDate: eventData.endDate,
-      endTime: eventData.endTime,
-      eventType: eventData.selectedType || '나',
-      // 기존 호환성을 위해 유지
-      date: eventData.startDate,
-      time: eventData.startTime,
-    };
-    setEvents(prev => [...prev, newEvent]);
-    console.log('Event saved:', newEvent);
-    return newEvent;
+export function useCalendarData() {
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentSpaceId, setCurrentSpaceId] = useState<string | null>(null);
+
+  // 초기 데이터 로딩
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  const loadInitialData = async () => {
+    try {
+      // 기본 스페이스 ID 가져오기
+      const spaceId = await EventService.getDefaultSpaceId();
+      if (spaceId) {
+        setCurrentSpaceId(spaceId);
+        await loadEventsForSpace(spaceId);
+      } else {
+        // 스페이스가 없으면 mock 데이터 사용
+        console.log('스페이스를 찾을 수 없어 mock 데이터를 사용합니다');
+        setEvents(mockEvents);
+      }
+    } catch (error) {
+      console.error('초기 데이터 로딩 실패:', error);
+      // 에러 발생 시 mock 데이터로 폴백
+      setEvents(mockEvents);
+    }
+  };
+
+  const loadEventsForSpace = async (spaceId: string) => {
+    try {
+      const serverEvents = await EventService.getEventsForSpace(spaceId);
+      const transformedEvents = serverEvents.map(event => 
+        transformServerEvent(event, event.users?.name)
+      );
+      setEvents(transformedEvents);
+    } catch (error) {
+      console.error('일정 로딩 실패:', error);
+      throw error;
+    }
+  };
+
+  const addEvent = async (eventData: any, userId: string, userName: string) => {
+    try {
+      if (!currentSpaceId) {
+        throw new Error('스페이스가 설정되지 않았습니다');
+      }
+
+      const createEventData: CreateEventData = {
+        title: eventData.title,
+        description: eventData.description,
+        startDate: eventData.startDate,
+        startTime: eventData.startTime,
+        endDate: eventData.endDate,
+        endTime: eventData.endTime,
+        eventType: eventData.selectedType || '나',
+        spaceId: currentSpaceId,
+      };
+
+      const serverEvent = await EventService.createEvent(createEventData);
+      const newEvent = transformServerEvent(serverEvent, userName);
+      
+      setEvents(prev => [...prev, newEvent]);
+      console.log('Event saved to database:', newEvent);
+      return newEvent;
+    } catch (error) {
+      console.error('일정 생성 실패:', error);
+      
+      // 에러 발생 시 로컬에서만 추가 (임시 방편)
+      const fallbackEvent: CalendarEvent = {
+        id: Date.now().toString(),
+        userId: userId || 'user1',
+        userName: userName || '내가',
+        title: eventData.title,
+        description: eventData.description,
+        startDate: eventData.startDate,
+        startTime: eventData.startTime,
+        endDate: eventData.endDate,
+        endTime: eventData.endTime,
+        eventType: eventData.selectedType || '나',
+        date: eventData.startDate,
+        time: eventData.startTime,
+      };
+      
+      setEvents(prev => [...prev, fallbackEvent]);
+      console.log('Event saved locally (fallback):', fallbackEvent);
+      return fallbackEvent;
+    }
   };
 
   // 사용자별 색상 할당
@@ -204,27 +288,26 @@ export function useCalendarData() {
     return markedDates;
   };
 
-  // 새로고침 함수 - 실제로는 서버에서 데이터를 다시 가져올 것
+  // 새로고침 함수 - 서버에서 데이터를 다시 가져옴
   const refreshEvents = async () => {
     setIsRefreshing(true);
     
     try {
       console.log('캘린더 새로고침 시작...');
       
-      // 시뮬레이션: 1.5초 후 새로고침 완료
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // 실제 구현 시에는 여기서 서버에서 이벤트를 다시 가져옴
-      // const freshEvents = await fetchEventsFromServer();
-      // setEvents(freshEvents);
-      
-      // 예시: 마지막 동기화 시간 업데이트
-      const lastSyncTime = new Date().toLocaleTimeString('ko-KR');
-      console.log(`캘린더 새로고침 완료 - ${lastSyncTime}`);
+      if (currentSpaceId) {
+        await loadEventsForSpace(currentSpaceId);
+        console.log('캘린더 새로고침 완료 - 서버에서 데이터 로딩');
+      } else {
+        // 스페이스가 없으면 초기 데이터 다시 로딩
+        await loadInitialData();
+        console.log('캘린더 새로고침 완료 - 초기 데이터 로딩');
+      }
       
     } catch (error) {
       console.error('캘린더 새로고침 실패:', error);
-      // 실제로는 사용자에게 에러 토스트 메시지 표시
+      // 에러 발생 시 mock 데이터로 폴백
+      setEvents(mockEvents);
     } finally {
       setIsRefreshing(false);
     }
