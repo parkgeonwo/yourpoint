@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { EventService, CreateEventData } from '../../services/eventService';
+import { useAuthStore } from '../../stores/authStore';
 import type { Event } from '../../lib/supabase';
 
 export interface CalendarEvent {
@@ -131,6 +132,7 @@ const transformServerEvent = (serverEvent: Event, userName?: string): CalendarEv
 });
 
 export function useCalendarData() {
+  const { user, isAuthenticated } = useAuthStore();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentSpaceId, setCurrentSpaceId] = useState<string | null>(null);
@@ -140,13 +142,30 @@ export function useCalendarData() {
     loadInitialData();
   }, []);
 
+  // 로그인 상태 변화 감지하여 데이터 다시 로딩
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      console.log('로그인 상태 변화 감지 - 데이터 다시 로딩');
+      loadInitialData();
+    } else if (!isAuthenticated) {
+      console.log('로그아웃 감지 - 데이터 초기화');
+      setEvents([]);
+      setCurrentSpaceId(null);
+    }
+  }, [isAuthenticated, user?.id]);
+
   const loadInitialData = async () => {
     try {
+      console.log('초기 데이터 로딩 시작...');
+      
       // 기본 스페이스 ID 가져오기
       const spaceId = await EventService.getDefaultSpaceId();
+      console.log('가져온 스페이스 ID:', spaceId);
+      
       if (spaceId) {
         setCurrentSpaceId(spaceId);
         await loadEventsForSpace(spaceId);
+        console.log('스페이스 데이터 로딩 완료');
       } else {
         // 스페이스가 없으면 mock 데이터 사용
         console.log('스페이스를 찾을 수 없어 mock 데이터를 사용합니다');
@@ -155,16 +174,27 @@ export function useCalendarData() {
     } catch (error) {
       console.error('초기 데이터 로딩 실패:', error);
       // 에러 발생 시 mock 데이터로 폴백
+      console.log('에러로 인해 mock 데이터로 폴백');
       setEvents(mockEvents);
     }
   };
 
   const loadEventsForSpace = async (spaceId: string) => {
     try {
+      console.log('스페이스별 이벤트 로딩 시작:', spaceId);
       const serverEvents = await EventService.getEventsForSpace(spaceId);
+      console.log('서버에서 가져온 이벤트 수:', serverEvents.length);
+      
       const transformedEvents = serverEvents.map(event => 
         transformServerEvent(event, event.users?.name)
       );
+      
+      console.log('변환된 이벤트들:', transformedEvents.map(e => ({
+        id: e.id,
+        title: e.title,
+        date: e.date
+      })));
+      
       setEvents(transformedEvents);
     } catch (error) {
       console.error('일정 로딩 실패:', error);
