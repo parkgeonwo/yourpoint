@@ -73,7 +73,7 @@ export default function CalendarDay({
           style={[
             styles.eventIndicator,
             { backgroundColor: getUserColor(event.userId) },
-            { top: 26 + index * 15 }
+            { top: 27 + index * 15 }
           ]}
         >
           <Text style={styles.eventIndicatorText} numberOfLines={1} ellipsizeMode="clip">
@@ -118,8 +118,8 @@ const styles = StyleSheet.create({
   todayDay: {
     backgroundColor: '#3b82f6',
     borderRadius: 20,
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
     justifyContent: 'center',
     alignItems: 'center',
     paddingLeft: 0,
