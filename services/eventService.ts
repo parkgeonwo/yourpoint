@@ -142,11 +142,21 @@ export class EventService {
    * 사용자의 기본 스페이스 ID를 가져옵니다 (개인 스페이스 우선)
    */
   static async getDefaultSpaceId(): Promise<string | null> {
-    const { data: { user } } = await supabase.auth.getUser();
+    console.log('getDefaultSpaceId 호출됨');
     
-    if (!user) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+      console.error('Auth 에러:', authError);
       return null;
     }
+    
+    if (!user) {
+      console.log('로그인된 사용자 없음');
+      return null;
+    }
+
+    console.log('현재 사용자:', user.id, user.email);
 
     // 개인 스페이스를 우선적으로 찾기
     const { data, error } = await supabase
@@ -162,8 +172,8 @@ export class EventService {
       .limit(1)
       .single();
 
-    if (error || !data) {
-      console.log('개인 스페이스를 찾을 수 없습니다. 첫 번째 스페이스 사용');
+    if (error) {
+      console.log('개인 스페이스 조회 에러:', error.message, error.code);
       
       // 개인 스페이스가 없으면 첫 번째 스페이스 사용 (폴백)
       const { data: fallbackData, error: fallbackError } = await supabase
@@ -173,9 +183,16 @@ export class EventService {
         .limit(1)
         .single();
 
+      if (fallbackError) {
+        console.error('폴백 스페이스 조회도 실패:', fallbackError);
+        return null;
+      }
+
+      console.log('폴백 스페이스 ID 사용:', fallbackData?.space_id);
       return fallbackData?.space_id || null;
     }
 
+    console.log('개인 스페이스 ID 찾음:', data.space_id);
     return data.space_id;
   }
 }

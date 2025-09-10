@@ -46,20 +46,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log('Auth state change:', event, session?.user?.email);
         
         if (session) {
+          // 로그인 성공 시 개인 스페이스를 먼저 확인/생성
+          if (event === 'SIGNED_IN') {
+            console.log('새로운 로그인 감지 - 개인 스페이스 설정 중...');
+            // 임시로 로딩 상태 유지
+            set({ loading: true });
+            
+            // 개인 스페이스 확인/생성 (동기적으로 처리)
+            try {
+              const userName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || '사용자';
+              await SpaceService.ensurePersonalSpace(session.user.id, userName);
+              console.log('개인 스페이스 설정 완료');
+            } catch (error) {
+              console.error('개인 스페이스 설정 실패:', error);
+            }
+          }
+          
+          // 상태 업데이트
           set({
             user: session.user,
             session,
             isAuthenticated: true,
+            loading: false,
           });
           await AsyncStorage.setItem('session', JSON.stringify(session));
-
-          // 로그인 성공 시 개인 스페이스 확인/생성
-          await get().ensurePersonalSpace();
         } else {
           set({
             user: null,
             session: null,
             isAuthenticated: false,
+            loading: false,
           });
           await AsyncStorage.removeItem('session');
         }

@@ -32,6 +32,10 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# MCP configuration (contains sensitive keys)
+.mcp.json
 
 # typescript
 *.tsbuildinfo

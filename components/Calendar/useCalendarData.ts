@@ -132,27 +132,39 @@ const transformServerEvent = (serverEvent: Event, userName?: string): CalendarEv
 });
 
 export function useCalendarData() {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, loading } = useAuthStore();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentSpaceId, setCurrentSpaceId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // 초기 데이터 로딩
+  // 로그인 상태 변화 감지하여 데이터 로딩
   useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  // 로그인 상태 변화 감지하여 데이터 다시 로딩
-  useEffect(() => {
+    console.log('Auth state:', { isAuthenticated, userId: user?.id, loading, isInitialized });
+    
+    // 로딩 중이면 대기
+    if (loading) {
+      console.log('Auth 로딩 중... 대기');
+      return;
+    }
+    
     if (isAuthenticated && user) {
-      console.log('로그인 상태 변화 감지 - 데이터 다시 로딩');
-      loadInitialData();
+      // 로그인 상태이고 아직 초기화되지 않았을 때만 로드
+      if (!isInitialized) {
+        console.log('로그인 확인 - 초기 데이터 로딩 시작');
+        setIsInitialized(true);
+        // 약간의 지연을 주어 스페이스 생성이 완료되도록 함
+        setTimeout(() => {
+          loadInitialData();
+        }, 500);
+      }
     } else if (!isAuthenticated) {
       console.log('로그아웃 감지 - 데이터 초기화');
       setEvents([]);
       setCurrentSpaceId(null);
+      setIsInitialized(false);
     }
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id, loading, isInitialized]);
 
   const loadInitialData = async () => {
     try {
