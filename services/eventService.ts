@@ -143,14 +143,14 @@ export class EventService {
    */
   static async getDefaultSpaceId(): Promise<string | null> {
     console.log('getDefaultSpaceId 호출됨');
-    
+
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError) {
       console.error('Auth 에러:', authError);
       return null;
     }
-    
+
     if (!user) {
       console.log('로그인된 사용자 없음');
       return null;
@@ -158,41 +158,36 @@ export class EventService {
 
     console.log('현재 사용자:', user.id, user.email);
 
-    // 개인 스페이스를 우선적으로 찾기
+    // 개인 스페이스를 직접 spaces 테이블에서 찾기 (순환 참조 방지)
     const { data, error } = await supabase
-      .from('space_members')
-      .select(`
-        space_id,
-        spaces!inner(
-          space_type
-        )
-      `)
-      .eq('user_id', user.id)
-      .eq('spaces.space_type', 'personal')
+      .from('spaces')
+      .select('id')
+      .eq('owner_id', user.id)
+      .eq('space_type', 'personal')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.log('개인 스페이스 조회 에러:', error.message, error.code);
-      
-      // 개인 스페이스가 없으면 첫 번째 스페이스 사용 (폴백)
+
+      // 개인 스페이스가 없으면 소유한 첫 번째 스페이스 사용 (폴백)
       const { data: fallbackData, error: fallbackError } = await supabase
-        .from('space_members')
-        .select('space_id')
-        .eq('user_id', user.id)
+        .from('spaces')
+        .select('id')
+        .eq('owner_id', user.id)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (fallbackError) {
         console.error('폴백 스페이스 조회도 실패:', fallbackError);
         return null;
       }
 
-      console.log('폴백 스페이스 ID 사용:', fallbackData?.space_id);
-      return fallbackData?.space_id || null;
+      console.log('폴백 스페이스 ID 사용:', fallbackData?.id);
+      return fallbackData?.id || null;
     }
 
-    console.log('개인 스페이스 ID 찾음:', data.space_id);
-    return data.space_id;
+    console.log('개인 스페이스 ID 찾음:', data?.id);
+    return data?.id || null;
   }
 }

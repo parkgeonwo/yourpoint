@@ -25,8 +25,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      // 먼저 저장된 세션 정리 (새로운 SDK 버전으로 인한 토큰 무효화 처리)
+      const storedSession = await AsyncStorage.getItem('session');
+      if (storedSession) {
+        try {
+          // 기존 세션 데이터 정리
+          await AsyncStorage.removeItem('session');
+        } catch (err) {
+          console.log('Clearing old session data');
+        }
+      }
+
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      if (error && error.message.includes('Refresh Token')) {
+        console.log('Refresh token invalid, clearing session');
+        await AsyncStorage.removeItem('session');
+        set({ loading: false });
+        return;
+      }
+
       if (session) {
         set({
           user: session.user,
@@ -34,7 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: true,
           loading: false,
         });
-        
+
         // 기존 세션 있을 시에도 개인 스페이스 확인/생성
         await get().ensurePersonalSpace();
       } else {
@@ -44,25 +62,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Listen for auth changes
       supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('Auth state change:', event, session?.user?.email);
-        
+
         if (session) {
           // 로그인 성공 시 개인 스페이스를 먼저 확인/생성
-          if (event === 'SIGNED_IN') {
-            console.log('새로운 로그인 감지 - 개인 스페이스 설정 중...');
-            // 임시로 로딩 상태 유지
-            set({ loading: true });
-            
-            // 개인 스페이스 확인/생성 (동기적으로 처리)
-            try {
-              const userName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || '사용자';
-              await SpaceService.ensurePersonalSpace(session.user.id, userName);
-              console.log('개인 스페이스 설정 완료');
-            } catch (error) {
-              console.error('개인 스페이스 설정 실패:', error);
-            }
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+            console.log('로그인/세션 업데이트 감지 - 상태 업데이트 중...');
+
+            // 개인 스페이스 확인/생성 (비동기로 처리)
+            const userName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || '사용자';
+            SpaceService.ensurePersonalSpace(session.user.id, userName)
+              .then(() => console.log('개인 스페이스 설정 완료'))
+              .catch(error => console.error('개인 스페이스 설정 실패:', error));
           }
-          
-          // 상태 업데이트
+
+          // 즉시 상태 업데이트
           set({
             user: session.user,
             session,

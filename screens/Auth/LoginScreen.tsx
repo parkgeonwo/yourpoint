@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import { lightTheme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
@@ -7,29 +7,34 @@ import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
-  const { refreshSession } = useAuthStore();
+  const { refreshSession, isAuthenticated } = useAuthStore();
+
+  // 인증 상태 변경 감지
+  useEffect(() => {
+    if (isAuthenticated && loading) {
+      console.log('Login successful, resetting loading state');
+      setLoading(false);
+    }
+  }, [isAuthenticated, loading]);
 
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
       console.log('Google login button pressed');
-      
+
       // Test Supabase connection first
       const { data, error } = await supabase.from('users').select('count').limit(1);
       console.log('Supabase connection test:', { data, error });
-      
+
       await authService.signInWithGoogle();
-      
-      // Force refresh session after login attempt
-      console.log('Login attempt completed, refreshing session...');
-      setTimeout(() => {
-        refreshSession();
-      }, 1500);
-      
+
+      // Don't immediately set loading to false
+      // Let the auth state change handle it
+      console.log('Login attempt initiated, waiting for auth state change...');
+
     } catch (error: any) {
       console.error('Google login error:', error);
       Alert.alert('로그인 오류', error.message || 'Google 로그인에 실패했습니다.');
-    } finally {
       setLoading(false);
     }
   };
@@ -38,9 +43,9 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       await authService.signInWithApple();
+      console.log('Apple login attempt initiated, waiting for auth state change...');
     } catch (error: any) {
       Alert.alert('로그인 오류', error.message || 'Apple 로그인에 실패했습니다.');
-    } finally {
       setLoading(false);
     }
   };

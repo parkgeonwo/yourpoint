@@ -71,14 +71,23 @@ export const authService = {
                 access_token: accessToken,
                 refresh_token: refreshToken,
               });
-              
+
               console.log('Session set result:', {
                 user: sessionData?.user?.email,
                 error: sessionError,
               });
-              
+
               if (sessionData?.session) {
                 console.log('✅ Login successful!');
+
+                // Force trigger auth state change
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                  console.log('Session confirmed, triggering refresh...');
+                  // Trigger a manual session refresh to ensure auth state updates
+                  await supabase.auth.refreshSession();
+                }
+
                 return data;
               }
             }

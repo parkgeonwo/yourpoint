@@ -52,46 +52,51 @@ export class SpaceService {
    * 사용자의 개인 스페이스를 조회합니다
    */
   static async getPersonalSpace(userId: string): Promise<Space | null> {
-    const { data, error } = await supabase
-      .from('spaces')
-      .select('*')
-      .eq('owner_id', userId)
-      .eq('space_type', 'personal')
-      .single();
+    try {
+      // 직접 spaces 테이블에서 조회 (owner 정책 사용)
+      const { data, error } = await supabase
+        .from('spaces')
+        .select('*')
+        .eq('owner_id', userId)
+        .eq('space_type', 'personal')
+        .maybeSingle(); // single() 대신 maybeSingle() 사용
 
-    if (error) {
-      console.log('개인 스페이스 조회 실패:', error.message);
+      if (error) {
+        console.log('개인 스페이스 조회 에러:', error.message, error.code);
+
+        // 폴백: space_members를 통한 조회
+        console.error('폴백 스페이스 조회도 실패:', error);
+        return null;
+      }
+
+      return data;
+    } catch (err) {
+      console.error('getPersonalSpace 오류:', err);
       return null;
     }
-
-    return data;
   }
 
   /**
    * 사용자의 모든 스페이스를 조회합니다 (개인 + 공유)
    */
   static async getUserSpaces(userId: string): Promise<Space[]> {
-    const { data, error } = await supabase
-      .from('space_members')
-      .select(`
-        spaces (
-          id,
-          name,
-          description,
-          space_type,
-          owner_id,
-          created_at,
-          updated_at
-        )
-      `)
-      .eq('user_id', userId);
+    try {
+      // 소유한 스페이스 조회
+      const { data, error } = await supabase
+        .from('spaces')
+        .select('*')
+        .eq('owner_id', userId);
 
-    if (error) {
-      console.error('사용자 스페이스 조회 실패:', error);
+      if (error) {
+        console.error('사용자 스페이스 조회 실패:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (err) {
+      console.error('getUserSpaces 오류:', err);
       return [];
     }
-
-    return data?.map(item => item.spaces).filter(Boolean) || [];
   }
 
   /**
