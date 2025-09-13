@@ -1,6 +1,7 @@
 /**
  * Application configuration with environment variable validation
  */
+import { logger } from './logger';
 
 interface Config {
   supabase: {
@@ -22,7 +23,7 @@ function requireEnv(name: string, fallback?: string): string {
   
   if (!value || value.trim() === '') {
     if (fallback !== undefined) {
-      console.warn(`Environment variable ${name} not found, using fallback value`);
+      logger.warn(`Environment variable ${name} not found, using fallback value`);
       return fallback;
     }
     throw new Error(
@@ -92,7 +93,7 @@ function getEnvironment(): 'development' | 'staging' | 'production' {
 
 // Load and validate configuration
 function loadConfig(): Config {
-  console.log('🔧 Loading application configuration...');
+  logger.info('Loading application configuration...');
   
   try {
     // Get required environment variables
@@ -117,28 +118,24 @@ function loadConfig(): Config {
       },
     };
     
-    console.log('✅ Configuration loaded successfully:', {
+    logger.info('Configuration loaded successfully:', {
       environment: config.app.environment,
       supabaseUrl: config.supabase.url,
-      supabaseKeyLength: config.supabase.anonKey.length,
     });
     
     return config;
   } catch (error) {
-    console.error('❌ Configuration error:', error);
-    
+    logger.error('Configuration error:', error);
+
     // In development, provide helpful instructions
     if (getEnvironment() === 'development') {
-      console.error(`
-🔧 Development Setup Instructions:
-1. Create a .env file in your project root
-2. Add the following variables:
-   EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
-3. Restart your development server
-
-📚 Need help? Check the setup guide in /plan/implementation-plan.md
-      `);
+      logger.error('Development Setup Instructions:\n' +
+        '1. Create a .env file in your project root\n' +
+        '2. Add the following variables:\n' +
+        '   EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co\n' +
+        '   EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here\n' +
+        '3. Restart your development server\n' +
+        'Need help? Check the setup guide in /plan/implementation-plan.md');
     }
     
     throw error;

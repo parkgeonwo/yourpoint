@@ -2,6 +2,7 @@
  * Environment validation utilities
  * Run this to validate your environment setup
  */
+import { logger } from './logger';
 
 interface ValidationResult {
   isValid: boolean;
@@ -72,39 +73,29 @@ export function validateEnvironment(): ValidationResult {
 }
 
 export function printValidationResults(result: ValidationResult): void {
-  console.log('\n🔍 Environment Validation Results:');
-  console.log('================================');
-  
   if (result.isValid) {
-    console.log('✅ All environment variables are properly configured!');
+    logger.info('All environment variables are properly configured!');
   } else {
-    console.log('❌ Environment validation failed!');
+    logger.error('Environment validation failed!');
   }
 
   if (result.errors.length > 0) {
-    console.log('\n🚨 Errors:');
-    result.errors.forEach(error => console.log(`   • ${error}`));
+    result.errors.forEach(error => logger.error(error));
   }
 
   if (result.warnings.length > 0) {
-    console.log('\n⚠️  Warnings:');
-    result.warnings.forEach(warning => console.log(`   • ${warning}`));
+    result.warnings.forEach(warning => logger.warn(warning));
   }
 
   if (!result.isValid) {
-    console.log(`
-🔧 Setup Instructions:
-1. Create a .env file in your project root
-2. Add your Supabase configuration:
-   EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
-3. Restart your development server
-
-📚 For detailed setup instructions, see /plan/implementation-plan.md
-    `);
+    logger.error('Setup Instructions:\n' +
+      '1. Create a .env file in your project root\n' +
+      '2. Add your Supabase configuration:\n' +
+      '   EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co\n' +
+      '   EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here\n' +
+      '3. Restart your development server\n' +
+      'For detailed setup instructions, see /plan/implementation-plan.md');
   }
-
-  console.log('================================\n');
 }
 
 // Auto-validate on import in development

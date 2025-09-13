@@ -273,8 +273,8 @@ export function useCalendarData() {
   // 이벤트 타입 또는 사용자별 색상 할당
   const getUserColor = (userId: string, eventType?: string) => {
     // eventType이 있으면 타입별 색상 사용
-    if (eventType && eventTypeColors[eventType]) {
-      return eventTypeColors[eventType];
+    if (eventType && eventType in eventTypeColors) {
+      return eventTypeColors[eventType as keyof typeof eventTypeColors];
     }
 
     // eventType이 없으면 사용자별 색상 사용 (fallback)
