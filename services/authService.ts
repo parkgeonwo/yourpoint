@@ -397,6 +397,56 @@ export const authService = {
     }
   },
 
+  async signInWithEmail(email: string, password: string) {
+    try {
+      logger.info('Starting email sign in...');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data?.session) {
+        logger.info('Email login successful for user:', data.user?.email);
+        await supabase.auth.refreshSession();
+      }
+
+      return data;
+    } catch (error) {
+      logger.error('Email sign in error:', error);
+      throw error;
+    }
+  },
+
+  async signUpWithEmail(email: string, password: string, name?: string) {
+    try {
+      logger.info('Starting email sign up...');
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name,
+            display_name: name,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.user) {
+        logger.info('Sign up successful for user:', data.user?.email);
+        logger.info('User profile will be created by database trigger');
+      }
+
+      return data;
+    } catch (error) {
+      logger.error('Email sign up error:', error);
+      throw error;
+    }
+  },
+
   async signOut() {
     try {
       const { error } = await supabase.auth.signOut();

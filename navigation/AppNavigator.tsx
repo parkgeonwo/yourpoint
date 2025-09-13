@@ -10,6 +10,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import SplashScreen from '../screens/SplashScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import LoginScreen from '../screens/Auth/LoginScreen';
+import SignUpScreen from '../screens/Auth/SignUpScreen';
 import CalendarScreen from '../screens/Main/CalendarScreen';
 import MyScreen from '../screens/Main/MyScreen';
 import { useAuthStore } from '../stores/authStore';
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   Splash: undefined;
   Onboarding: undefined;
   Login: undefined;
+  SignUp: undefined;
   Main: undefined;
 };
 
@@ -168,7 +170,10 @@ export default function AppNavigator() {
             {() => <OnboardingScreen onComplete={handleOnboardingComplete} />}
           </Stack.Screen>
         ) : !isAuthenticated ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="SignUp" component={SignUpScreen} />
+          </>
         ) : (
           <Stack.Screen name="Main" component={MainTabNavigator} />
         )}
