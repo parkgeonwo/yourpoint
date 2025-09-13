@@ -17,6 +17,8 @@ interface AuthState {
   ensurePersonalSpace: () => Promise<void>;
 }
 
+let spaceInitializationPromise: Promise<void> | null = null; // Promise로 동시 실행 방지
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   session: null,
@@ -53,8 +55,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           loading: false,
         });
 
-        // 기존 세션 있을 시에도 개인 스페이스 확인/생성
-        await get().ensurePersonalSpace();
+        // 초기화 시에는 개인 스페이스 생성하지 않음 (onAuthStateChange에서 처리)
       } else {
         set({ loading: false });
       }
@@ -64,15 +65,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log('Auth state change:', event, session?.user?.email);
 
         if (session) {
-          // 로그인 성공 시 개인 스페이스를 먼저 확인/생성
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-            console.log('로그인/세션 업데이트 감지 - 상태 업데이트 중...');
+          // 로그인 성공 시 개인 스페이스를 먼저 확인/생성 (SIGNED_IN 이벤트일 때만, 한 번만)
+          if (event === 'SIGNED_IN') {
+            // 이미 초기화 중이면 기존 Promise 반환
+            if (!spaceInitializationPromise) {
+              console.log('새로운 로그인 감지 - 개인 스페이스 확인/생성 중...');
 
-            // 개인 스페이스 확인/생성 (비동기로 처리)
-            const userName = session.user.user_metadata?.name || session.user.email?.split('@')[0] || '사용자';
-            SpaceService.ensurePersonalSpace(session.user.id, userName)
-              .then(() => console.log('개인 스페이스 설정 완료'))
-              .catch(error => console.error('개인 스페이스 설정 실패:', error));
+              // Promise를 저장하여 동시 실행 방지
+              spaceInitializationPromise = (async () => {
+                try {
+                  const userName = session.user.user_metadata?.display_name ||
+                                 session.user.user_metadata?.name ||
+                                 session.user.email?.split('@')[0] ||
+                                 '사용자';
+                  await SpaceService.ensurePersonalSpace(session.user.id, userName);
+                  console.log('개인 스페이스 설정 완료');
+                } catch (error) {
+                  console.error('개인 스페이스 설정 실패:', error);
+                }
+              })();
+            } else {
+              console.log('이미 스페이스 초기화 진행 중, 스킵');
+            }
           }
 
           // 즉시 상태 업데이트
@@ -84,6 +98,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
           await AsyncStorage.setItem('session', JSON.stringify(session));
         } else {
+          // 로그아웃 시 Promise 리셋
+          spaceInitializationPromise = null;
           set({
             user: null,
             session: null,
