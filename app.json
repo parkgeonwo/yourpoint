@@ -15,7 +15,9 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.timetomake.yourpoint"
+      "bundleIdentifier": "com.timetomake.yourpoint",
+      "usesAppleSignIn": true,
+      "associatedDomains": ["applinks:YOUR_SUPABASE_PROJECT_REF.supabase.co"]
     },
     "android": {
       "adaptiveIcon": {

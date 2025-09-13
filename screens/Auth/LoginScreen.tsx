@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { lightTheme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
 import { authService } from '../../services/authService';
+import SocialLoginButton from '../../components/auth/SocialLoginButton';
 import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
@@ -139,27 +140,10 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.button, styles.socialButton, loading && styles.disabledButton]}
-            onPress={handleGoogleLogin}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? '로그인 중...' : 'Google로 로그인'}
-            </Text>
-          </TouchableOpacity>
-
-          {Platform.OS === 'ios' && (
-            <TouchableOpacity
-              style={[styles.button, styles.appleButton, loading && styles.disabledButton]}
-              onPress={handleAppleLogin}
-              disabled={loading}
-            >
-              <Text style={[styles.buttonText, styles.appleButtonText]}>
-                {loading ? '로그인 중...' : 'Apple로 로그인'}
-              </Text>
-            </TouchableOpacity>
-          )}
+          <View style={styles.socialButtonContainer}>
+            <SocialLoginButton provider="google" />
+            <SocialLoginButton provider="apple" />
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -260,5 +244,9 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.6,
+  },
+  socialButtonContainer: {
+    width: '100%',
+    marginTop: lightTheme.spacing.sm,
   },
 });
