@@ -18,6 +18,14 @@ export interface CalendarEvent {
   userName: string;
 }
 
+// 이벤트 타입별 색상
+export const eventTypeColors = {
+  '나': '#6366f1',     // 보라색 - 내 일정
+  '상대': '#f59e0b',   // 주황색 - 상대방 일정
+  '우리': '#ec4899',   // 핑크색 - 함께하는 일정
+};
+
+// 사용자별 색상 (eventType이 없는 경우를 위한 fallback)
 export const eventColors = [
   '#6366f1', // Primary - 내 일정
   '#f59e0b', // Amber - 다른 사용자 1
@@ -262,8 +270,14 @@ export function useCalendarData() {
     }
   };
 
-  // 사용자별 색상 할당
-  const getUserColor = (userId: string) => {
+  // 이벤트 타입 또는 사용자별 색상 할당
+  const getUserColor = (userId: string, eventType?: string) => {
+    // eventType이 있으면 타입별 색상 사용
+    if (eventType && eventTypeColors[eventType]) {
+      return eventTypeColors[eventType];
+    }
+
+    // eventType이 없으면 사용자별 색상 사용 (fallback)
     const userIds = [...new Set(events.map(e => e.userId))];
     const index = userIds.indexOf(userId);
     return eventColors[index % eventColors.length];
@@ -296,19 +310,19 @@ export function useCalendarData() {
   // 마크된 날짜 생성 (period marking 사용)
   const getMarkedDates = () => {
     const markedDates = {};
-    
+
     events.forEach((event) => {
       if (event.startDate && event.endDate) {
         const dateRange = getDateRange(event.startDate, event.endDate);
         const isMultiDay = event.startDate !== event.endDate;
-        const color = getUserColor(event.userId);
-        
+        const color = getUserColor(event.userId, event.eventType);
+
         if (isMultiDay) {
           // 멀티데이 이벤트는 period로 표시
           dateRange.forEach((date, index) => {
             const isStarting = index === 0;
             const isEnding = index === dateRange.length - 1;
-            
+
             markedDates[date] = {
               startingDay: isStarting,
               endingDay: isEnding,
@@ -355,10 +369,82 @@ export function useCalendarData() {
     }
   };
 
+  const updateEvent = async (eventId: string, eventData: any) => {
+    try {
+      if (!currentSpaceId) {
+        throw new Error('스페이스가 설정되지 않았습니다');
+      }
+
+      const updateEventData = {
+        title: eventData.title,
+        description: eventData.description,
+        startDate: eventData.startDate,
+        startTime: eventData.startTime + ':00', // HH:MM -> HH:MM:SS
+        endDate: eventData.endDate,
+        endTime: eventData.endTime + ':00', // HH:MM -> HH:MM:SS
+        eventType: eventData.eventType,
+        spaceId: currentSpaceId,
+      };
+
+      const serverEvent = await EventService.updateEvent(eventId, updateEventData);
+
+      // 로컬 상태 업데이트
+      setEvents(prev => prev.map(event =>
+        event.id === eventId
+          ? transformServerEvent(serverEvent, event.userName)
+          : event
+      ));
+
+      console.log('Event updated in database:', serverEvent);
+      return serverEvent;
+    } catch (error) {
+      console.error('일정 수정 실패:', error);
+
+      // 에러 발생 시 로컬에서만 업데이트 (임시 방편)
+      setEvents(prev => prev.map(event =>
+        event.id === eventId
+          ? {
+              ...event,
+              title: eventData.title,
+              description: eventData.description,
+              startDate: eventData.startDate,
+              startTime: eventData.startTime,
+              endDate: eventData.endDate,
+              endTime: eventData.endTime,
+              eventType: eventData.eventType,
+              date: eventData.startDate,
+              time: eventData.startTime,
+            }
+          : event
+      ));
+      console.log('Event updated locally (fallback)');
+    }
+  };
+
+  const deleteEvent = async (eventId: string) => {
+    try {
+      // Supabase에서 삭제
+      await EventService.deleteEvent(eventId);
+
+      // 로컬 상태에서 제거
+      setEvents(prev => prev.filter(event => event.id !== eventId));
+
+      console.log('Event deleted from database:', eventId);
+    } catch (error) {
+      console.error('일정 삭제 실패:', error);
+
+      // 에러 발생 시에도 로컬에서는 삭제 (임시 방편)
+      setEvents(prev => prev.filter(event => event.id !== eventId));
+      console.log('Event deleted locally (fallback)');
+    }
+  };
+
   return {
     events,
     isRefreshing,
     addEvent,
+    updateEvent,
+    deleteEvent,
     refreshEvents,
     getUserColor,
     getEventsForDate,

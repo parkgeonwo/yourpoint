@@ -16,6 +16,17 @@ interface EventModalProps {
   visible: boolean;
   onClose: () => void;
   selectedDate?: string;
+  mode?: 'create' | 'edit';
+  editEvent?: {
+    id: string;
+    title: string;
+    description: string;
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    endTime: string;
+    eventType: string;
+  };
   onSave: (event: {
     title: string;
     description: string;
@@ -23,6 +34,16 @@ interface EventModalProps {
     startTime: string;
     endDate: string;
     endTime: string;
+    selectedType?: string;
+  }) => void;
+  onUpdate?: (eventId: string, event: {
+    title: string;
+    description: string;
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    endTime: string;
+    eventType: string;
   }) => void;
 }
 
@@ -30,7 +51,10 @@ export default function EventModal({
   visible,
   onClose,
   selectedDate,
+  mode = 'create',
+  editEvent,
   onSave,
+  onUpdate,
 }: EventModalProps) {
   const today = new Date().toISOString().split('T')[0];
   const [title, setTitle] = useState('');
@@ -45,13 +69,35 @@ export default function EventModal({
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
-  // selectedDate가 변경될 때마다 시작/종료 날짜 업데이트
+  // editEvent가 있으면 수정 모드로 초기화
   useEffect(() => {
-    if (selectedDate) {
+    if (mode === 'edit' && editEvent) {
+      setTitle(editEvent.title || '');
+      setDescription(editEvent.description || '');
+      setStartDate(editEvent.startDate || selectedDate || today);
+      setStartTime(editEvent.startTime ? editEvent.startTime.substring(0, 5) : '15:00');
+      setEndDate(editEvent.endDate || selectedDate || today);
+      setEndTime(editEvent.endTime ? editEvent.endTime.substring(0, 5) : '16:00');
+      setSelectedType(editEvent.eventType || '나');
+    } else if (mode === 'create') {
+      // 새 일정 생성 모드일 때 초기화
+      setTitle('');
+      setDescription('');
+      setStartDate(selectedDate || today);
+      setStartTime('15:00');
+      setEndDate(selectedDate || today);
+      setEndTime('16:00');
+      setSelectedType('나');
+    }
+  }, [mode, editEvent, selectedDate, today]);
+
+  // selectedDate가 변경될 때마다 시작/종료 날짜 업데이트 (생성 모드일 때만)
+  useEffect(() => {
+    if (mode === 'create' && selectedDate) {
       setStartDate(selectedDate);
       setEndDate(selectedDate);
     }
-  }, [selectedDate]);
+  }, [selectedDate, mode]);
 
   const handleSave = () => {
     if (!title.trim()) {
@@ -59,15 +105,29 @@ export default function EventModal({
       return;
     }
 
-    onSave({
-      title: title.trim(),
-      description: description.trim(),
-      startDate: startDate,
-      startTime: startTime,
-      endDate: endDate,
-      endTime: endTime,
-      selectedType: selectedType,
-    });
+    if (mode === 'edit' && editEvent && onUpdate) {
+      // 수정 모드
+      onUpdate(editEvent.id, {
+        title: title.trim(),
+        description: description.trim(),
+        startDate: startDate,
+        startTime: startTime,
+        endDate: endDate,
+        endTime: endTime,
+        eventType: selectedType,
+      });
+    } else {
+      // 생성 모드
+      onSave({
+        title: title.trim(),
+        description: description.trim(),
+        startDate: startDate,
+        startTime: startTime,
+        endDate: endDate,
+        endTime: endTime,
+        selectedType: selectedType,
+      });
+    }
 
     // Reset form
     setTitle('');
@@ -76,6 +136,7 @@ export default function EventModal({
     setStartTime('15:00');
     setEndDate(selectedDate || today);
     setEndTime('16:00');
+    setSelectedType('나');
     onClose();
   };
 
@@ -91,9 +152,9 @@ export default function EventModal({
           <TouchableOpacity onPress={onClose}>
             <Text style={styles.cancelText}>취소</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>새 일정</Text>
+          <Text style={styles.title}>{mode === 'edit' ? '일정 수정' : '새 일정'}</Text>
           <TouchableOpacity onPress={handleSave}>
-            <Text style={styles.saveText}>저장</Text>
+            <Text style={styles.saveText}>{mode === 'edit' ? '수정' : '저장'}</Text>
           </TouchableOpacity>
         </View>
 

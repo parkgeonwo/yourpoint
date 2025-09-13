@@ -72,7 +72,7 @@ export default function CalendarDay({
           key={event.id}
           style={[
             styles.eventIndicator,
-            { backgroundColor: getUserColor(event.userId) },
+            { backgroundColor: getUserColor(event.userId, event.eventType) },
             { top: 27 + index * 15 }
           ]}
         >

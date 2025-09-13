@@ -20,8 +20,8 @@ export default function CalendarScreen() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [showMonthYearPicker, setShowMonthYearPicker] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().split('T')[0]);
-  
-  const { events, isRefreshing, addEvent, refreshEvents, getUserColor, getEventsForDate, getMarkedDates } = useCalendarData();
+
+  const { events, isRefreshing, addEvent, updateEvent, deleteEvent, refreshEvents, getUserColor, getEventsForDate, getMarkedDates } = useCalendarData();
 
   const handleSaveEvent = (eventData: any) => {
     addEvent(
@@ -29,6 +29,14 @@ export default function CalendarScreen() {
       user?.id || 'user1',
       user?.user_metadata?.name || '내가'
     );
+  };
+
+  const handleUpdateEvent = (eventId: string, eventData: any) => {
+    updateEvent(eventId, eventData);
+  };
+
+  const handleDeleteEvent = (eventId: string) => {
+    deleteEvent(eventId);
   };
 
   const handleMonthYearSelect = (year: number, month: number) => {
@@ -205,6 +213,8 @@ export default function CalendarScreen() {
         events={getEventsForDate(selectedDate)}
         getUserColor={getUserColor}
         onAddEvent={() => setShowEventModal(true)}
+        onUpdateEvent={handleUpdateEvent}
+        onDeleteEvent={handleDeleteEvent}
       />
 
       <MonthYearPicker
