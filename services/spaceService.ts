@@ -102,47 +102,17 @@ export class SpaceService {
   /**
    * 개인 스페이스가 없으면 생성하고, 있으면 반환합니다
    */
-  private static creatingPromises: Map<string, Promise<Space>> = new Map();
-  private static spaceCache: Map<string, Space> = new Map();
-
   static async ensurePersonalSpace(userId: string, userName: string): Promise<Space> {
-    // 캐시 확인
-    if (this.spaceCache.has(userId)) {
-      console.log('캐시에서 개인 스페이스 반환');
-      return this.spaceCache.get(userId)!;
+    // 기존 개인 스페이스 확인
+    let personalSpace = await this.getPersonalSpace(userId);
+    
+    if (!personalSpace) {
+      console.log('개인 스페이스가 없어 새로 생성합니다');
+      personalSpace = await this.createPersonalSpace(userId, userName);
+    } else {
+      console.log('기존 개인 스페이스 사용:', personalSpace.name);
     }
 
-    // 이미 생성 중인 Promise가 있으면 그것을 반환
-    if (this.creatingPromises.has(userId)) {
-      console.log('이미 스페이스 생성 중... 기존 Promise 대기');
-      return this.creatingPromises.get(userId)!;
-    }
-
-    // 새로운 생성 Promise 생성
-    const creationPromise = (async () => {
-      try {
-        // 기존 개인 스페이스 확인
-        let personalSpace = await this.getPersonalSpace(userId);
-
-        if (!personalSpace) {
-          console.log('개인 스페이스가 없어 새로 생성합니다');
-          personalSpace = await this.createPersonalSpace(userId, userName);
-        } else {
-          console.log('기존 개인 스페이스 사용:', personalSpace.name);
-        }
-
-        // 캐시에 저장
-        this.spaceCache.set(userId, personalSpace);
-        return personalSpace;
-      } finally {
-        // Promise 맵에서 제거
-        this.creatingPromises.delete(userId);
-      }
-    })();
-
-    // Promise를 맵에 저장
-    this.creatingPromises.set(userId, creationPromise);
-
-    return creationPromise;
+    return personalSpace;
   }
 }
